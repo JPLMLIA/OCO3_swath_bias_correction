@@ -22,14 +22,6 @@ export OCO3_DATA_DIR="/path/to/your/oco3/lite/files"
 export OCO3_OUTPUT_DIR="/path/to/output/directory"
 ```
 
-### Quick Test
-```bash
-# Verify installation
-python -c "from src.utils.config_paths import PathConfig; print('✅ Installation OK')"
-
-# Check configuration
-python -c "from src.utils.config_paths import PathConfig; PathConfig().print_config_summary()"
-```
 
 ## 📁 Repository Structure
 
@@ -157,13 +149,6 @@ python -m src.analysis.run_comprehensive_analysis --list
 - **`--publication`**: Scripts to generate publication-ready figures.
 - **`--all`**: The complete analysis suite (9 scripts, ~30-45 minutes).
 
-
-## 🎯 Expected Performance
-
-- **Detection Accuracy**: F1-score ~0.67 (67% accurate bias identification).
-- **Processing Efficiency**: ~15% of SAMs receive corrections.
-- **Physical Validation**: Confirms AOD-bias correlation (r=0.33).
-- **Bias Reduction**: Significant reduction in swath-to-swath XCO₂ jumps.
 
 ## ⚙️ Centralized Configuration System
 
