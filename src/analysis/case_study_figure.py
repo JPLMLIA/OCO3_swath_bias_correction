@@ -19,24 +19,6 @@ sys.path.insert(0, project_root)
 from src.utils.main_util import plot_SAM, read_oco_netcdf_to_df, get_foreground_background_indices, get_target_data
 from src.utils.config_paths import PathConfig
 
-# Case study SAMs with descriptive names
-# CASE_STUDIES = [
-#     {
-#         'sam_id': 'fossil0022_23072',
-#         'name': 'Paris, France',
-#         'file': 'oco3_LtCO2_230601_B11072Ar_240915220803s_SwathBC.nc4'
-#     },
-#     {
-#         'sam_id': 'fossil0024_8365',
-#         'name': 'Tianjin, China',
-#         'file': 'oco3_LtCO2_201025_B11072Ar_240913233053s_SwathBC.nc4'
-#     },
-#     {
-#         'sam_id': 'fossil0183_29888',
-#         'name': 'Colstrip Power Plant, MT, USA',
-#         'file': 'oco3_LtCO2_240814_B11072Ar_241126004843s_SwathBC.nc4'
-#     }
-# ]
 
 CASE_STUDIES = [
     {
