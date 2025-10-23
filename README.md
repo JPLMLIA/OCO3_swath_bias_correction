@@ -12,15 +12,10 @@ conda activate oco3_bias
 pip install -r requirements.txt
 ```
 
-### Environment Setup
-Set the following environment variables (or let the system use defaults):
-```bash
-# Required: Directory containing your OCO-3 Lite files
-export OCO3_DATA_DIR="/path/to/your/oco3/lite/files"
+### Configuration
+Recommended: copy `src/utils/config_local.example.py` to `src/utils/config_local.py` and set `USER_DATA_DIR` and `USER_OUTPUT_DIR`.
+If left unset, defaults are `data/input` and `data/output` under the project root.
 
-# Optional: Output directory for processed files (defaults to ./data/output)
-export OCO3_OUTPUT_DIR="/path/to/output/directory"
-```
 
 
 ## 📁 Repository Structure
@@ -53,10 +48,9 @@ code/
 ├── tmp/                 # Temporary files (excluded from git)
 
 # Configuration and setup files
-├── config_example.py    # Configuration examples for different setups
 ├── setup.sh            # Automated environment setup script
-├── use_original_config.py    # Switch to original config (development)
-├── restore_public_config.py # Switch to public config (sharing)
+├── src/utils/config_paths.py         # Centralized path configuration
+├── src/utils/config_local.example.py # Local override template (copy to config_local.py)
 ├── requirements.txt    # Python dependencies
 ├── LICENSE            # MIT license
 ├── Paper.md          # Research paper draft
@@ -84,7 +78,7 @@ The project follows a three-phase workflow:
 - Uses 1,279 labeled SAMs for training.
 - Performs hyperparameter optimization using Optuna.
 - Employs 4-fold cross-validation for robust evaluation.
-- **NEW**: Implements a reordered pipeline (RF decision first, then targeted corrections).
+- Implements a reordered pipeline (RF decision first, then targeted corrections).
 - Saves the optimized model, CV results, and performance metrics.
 
 **Usage**:
@@ -150,6 +144,13 @@ python -m src.analysis.run_comprehensive_analysis --list
 - **`--all`**: The complete analysis suite (9 scripts, ~30-45 minutes).
 
 
+## 🎯 Expected Performance
+
+- **Detection Accuracy**: F1-score ~0.67 (67% accurate bias identification).
+- **Processing Efficiency**: ~15% of SAMs receive corrections.
+- **Physical Validation**: Confirms AOD-bias correlation (r=0.33).
+- **Bias Reduction**: Significant reduction in swath-to-swath XCO₂ jumps.
+
 ## ⚙️ Centralized Configuration System
 
 All paths and experiment settings are now centralized in `src/utils/config_paths.py` for easy experiment management.
@@ -173,10 +174,6 @@ python -m src.analysis.run_comprehensive_analysis --core  # Analyze results
 
 ### Example Usage:
 ```bash
-# Set your data paths
-export OCO3_DATA_DIR="/your/path/to/oco3/lite/files"
-export OCO3_OUTPUT_DIR="/your/path/to/output"
-
 # Run the complete pipeline
 python -m src.modeling.Swath_BC_v3                        # Train model
 python -m src.processing.apply_swath_bc_RF                # Process data
@@ -187,8 +184,8 @@ python -m src.analysis.run_comprehensive_analysis --core  # Analyze results
 ```
 your-project/
 ├── data/
-│   ├── models/Swath_BC_v4.0_FinalHardcoded/
-│   ├── processed/Swath_BC_v4.0_FinalHardcoded/ 
+│   ├── models/Swath_BC_v4.0/
+│   ├── processed/Swath_BC_v4.0/ 
 │   └── output/Lite_w_SwathBC_v4.0/
 └── results/figures/
 ```
