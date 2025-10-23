@@ -76,11 +76,6 @@ class AnalysisRunner:
                 'description': 'Generate publication-quality swath bias examples figure',
                 'estimated_time': '3-8 minutes'
             },
-            'global_impact': {
-                'script': 'src.analysis.global_impact_analysis',
-                'description': 'Global impact analysis for Section 5.4 (statistics, maps, examples)',
-                'estimated_time': '10-20 minutes'
-            },
         }
         
         # Define analysis groups
@@ -88,8 +83,7 @@ class AnalysisRunner:
             'core': ['shap', 'bias_plots', 'evaluation_plots'],
             'plots': ['bias_plots', 'simple_bias_plots', 'regenerate_plots', 'bias_examples'],
             'validation': ['shap_core'],
-            'publication': ['bias_examples', 'evaluation_plots', 'shap', 'global_impact'],
-            'section54': ['global_impact'],  # New group specifically for Section 5.4
+            'publication': ['bias_examples', 'evaluation_plots', 'shap'],
             'all': list(self.analysis_scripts.keys())
         }
 
