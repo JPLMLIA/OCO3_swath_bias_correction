@@ -1,21 +1,41 @@
 #!/usr/bin/env python3
 """
-BACKUP: Original Path Configuration for OCO-3 Swath Bias Correction
-This is a backup of the original config with hardcoded local paths.
-Keep this file for local development/analysis but don't use in public version.
+Centralized Path Configuration for OCO-3 Swath Bias Correction
 
 This file contains all path configurations, version strings, and directory structures
 used throughout the project. Update this file to run new experiments or change
 data locations without modifying individual scripts.
 
+For public use, configure your paths in the User configuration section below.
+Defaults: project_root/data/input (Lite files) and project_root/data/output (processed files).
+
 Usage:
-    from src.utils.config_paths_original_backup import PathConfig
+    from src.utils.config_paths import PathConfig
     config = PathConfig()
     model_path = config.get_model_path()
 """
 
 import os
 from pathlib import Path
+
+
+# =============================================================
+# User configuration
+# -------------------------------------------------------------
+# Set these to absolute paths to override defaults.
+# Leave as None to use project-root defaults:
+#   - Lite files:   <project_root>/data/input
+#   - Output base:  <project_root>/data/output
+USER_DATA_DIR = None       # e.g., "/path/to/your/oco3/lite/files"
+USER_OUTPUT_DIR = None     # e.g., "/path/to/output/directory"
+
+# Optional: load local overrides if present (not tracked in git)
+try:
+    from . import config_local as _config_local  # type: ignore
+    USER_DATA_DIR = getattr(_config_local, 'USER_DATA_DIR', USER_DATA_DIR)
+    USER_OUTPUT_DIR = getattr(_config_local, 'USER_OUTPUT_DIR', USER_OUTPUT_DIR)
+except Exception:
+    _config_local = None
 
 
 class PathConfig:
@@ -35,11 +55,7 @@ class PathConfig:
         
         # Model version and experiment name
         self.MODEL_VERSION = "v4.0"
-        self.EXPERIMENT_NAME = "Swath_BC_" + self.MODEL_VERSION + "_th_06"
-        # Optional experiment suffix via environment variable to separate runs (e.g., QF0)
-        suffix = os.getenv('OCO3_EXP_SUFFIX', '').strip()
-        if suffix:
-            self.EXPERIMENT_NAME = f"{self.EXPERIMENT_NAME}_{suffix}"
+        self.EXPERIMENT_NAME = "Swath_BC_" + self.MODEL_VERSION + "_06"
         
         # Production processing version
         self.PROCESSING_VERSION = self.MODEL_VERSION
@@ -48,8 +64,8 @@ class PathConfig:
         # DATA INPUT PATHS - UPDATE THESE FOR DIFFERENT DATA LOCATIONS
         # =================================================================
         
-        # OCO-3 Lite files (input data) - ORIGINAL HARDCODED PATHS
-        self.LITE_FILES_DIR = "/Volumes/OCO/LiteFiles/B11_OCO3"
+        # OCO-3 Lite files (input data) - Use user setting or project default
+        self.LITE_FILES_DIR = str(USER_DATA_DIR or (self.project_root / "data" / "input"))
         self.LITE_FILES_PATTERN = "oco3_LtCO2_*B11072Ar*.nc4"
         
         # Labels and reference data
@@ -77,8 +93,8 @@ class PathConfig:
         # Intermediate data
         self.INTERMEDIATE_DIR = self.project_root / "data" / "intermediate"
         
-        # Output processed files - ORIGINAL HARDCODED PATHS
-        self.OUTPUT_BASE_DIR = "/Volumes/OCO/LiteFiles/B11_OCO3_SwathBiasCorrected"
+        # Output processed files - Use user setting or project default
+        self.OUTPUT_BASE_DIR = str(USER_OUTPUT_DIR or (self.project_root / "data" / "output"))
         self.OUTPUT_VERSION_DIR = f"Lite_w_SwathBC_{self.PROCESSING_VERSION}"
         self.OUTPUT_FULL_DIR = os.path.join(self.OUTPUT_BASE_DIR, self.OUTPUT_VERSION_DIR)
         
@@ -186,4 +202,79 @@ class PathConfig:
         print(f"Output Directory: {self.OUTPUT_FULL_DIR}")
         print(f"Model Path: {self.get_model_path()}")
         print(f"Results Directory: {self.FIGURES_DIR}")
-        print("="*60) 
+        print("="*60)
+
+    def validate_paths(self):
+        """Validate that required paths exist and warn about missing ones"""
+        issues = []
+        
+        # Check input data directory
+        if not os.path.exists(self.LITE_FILES_DIR):
+            issues.append(f"Input data directory not found: {self.LITE_FILES_DIR}")
+            
+        # Check if labels file exists
+        if not self.LABELS_FILE.exists():
+            issues.append(f"Labels file not found: {self.LABELS_FILE}")
+            
+        return issues
+
+
+# =================================================================
+# CONVENIENCE FUNCTIONS FOR BACKWARD COMPATIBILITY
+# =================================================================
+
+def get_default_config():
+    """Get the default path configuration"""
+    return PathConfig()
+
+def get_model_path():
+    """Quick access to model path"""
+    return get_default_config().get_model_path()
+
+def get_processed_data_dir():
+    """Quick access to processed data directory"""
+    return get_default_config().PROCESSED_FINAL_DIR
+
+def get_output_dir():
+    """Quick access to output directory"""
+    return get_default_config().OUTPUT_FULL_DIR
+
+
+# =================================================================
+# MIGRATION HELPER
+# =================================================================
+
+def update_experiment_config(model_version=None, experiment_name=None, processing_version=None):
+    """
+    Helper function to easily update experiment configuration
+    
+    Example:
+        update_experiment_config(
+            model_version="v4.0",
+            experiment_name="Swath_BC_v4.0_NewFeatures",
+            processing_version="v4.0"
+        )
+    """
+    config = PathConfig()
+    
+    if model_version:
+        config.MODEL_VERSION = model_version
+    if experiment_name:
+        config.EXPERIMENT_NAME = experiment_name
+    if processing_version:
+        config.PROCESSING_VERSION = processing_version
+    
+    # Regenerate dependent paths
+    config.__init__(config.project_root)
+    
+    return config
+
+
+if __name__ == "__main__":
+    # Demo the configuration
+    config = PathConfig()
+    config.print_config_summary()
+    
+    print("\nCreating output directories...")
+    config.ensure_output_dirs()
+    print("✅ All directories created successfully!") 
