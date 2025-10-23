@@ -236,7 +236,7 @@ def plot_confusion_matrix_examples(data, output_dir, n_examples=4):
     all_example_paths = {}
     
     # Set random seed for reproducible results
-    np.random.seed(42)
+    np.random.seed(999)
     
     for category in categories:
         print(f"Processing {category} examples...")
@@ -259,8 +259,17 @@ def plot_confusion_matrix_examples(data, output_dir, n_examples=4):
         
         for i, sam_id in enumerate(sams_in_category):
             sam_data = category_data[category_data['SAM'] == sam_id]
+
+            # Filter to QF=0 only
+            if 'xco2_quality_flag' not in sam_data.columns:
+                print("  ✗ Missing xco2_quality_flag; cannot apply QF=0 filter")
+                continue
+            sam_data = sam_data[sam_data['xco2_quality_flag'] == 0].copy()
+            if sam_data.empty:
+                print(f"  ✗ After QF=0 filter, no data remains for {sam_id}")
+                continue
             
-            if len(sam_data) < 10:  # Skip if too few soundings
+            if len(sam_data) < 500:  # Skip if too few soundings
                 continue
                 
             # Create plots for original, corrected, and difference
