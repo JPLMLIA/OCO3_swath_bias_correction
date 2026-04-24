@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import glob
 import netCDF4 as nc
-from numba import int64, int32
 from tqdm import tqdm
 from ..utils.config_paths import PathConfig
 

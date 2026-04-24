@@ -12,6 +12,7 @@ xgboost>=1.5.0,<2.0.0
 # Data handling and I/O
 netcdf4>=1.5.7,<1.7.0
 h5py>=3.7.0,<3.10.0
+pyarrow>=10.0.0          # parquet engine for pandas
 joblib>=1.1.1,<1.4.0
 
 # Visualization
@@ -27,6 +28,3 @@ pyproj>=3.3.1,<3.7.0
 
 # Progress bars
 tqdm>=4.64.1,<5.0.0
-
-# Performance
-numba>=0.56.4,<0.59.0

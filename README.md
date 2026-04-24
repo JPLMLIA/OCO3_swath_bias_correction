@@ -4,13 +4,27 @@ This repository contains code for detecting and correcting swath-dependent biase
 
 
 ### Installation
+
+**Recommended (conda):** handles the GEOS / PROJ / HDF5 / NetCDF system libraries
+required by `cartopy`, `pyproj`, `netcdf4`, and `h5py` automatically.
 ```bash
 git clone https://github.com/your-username/oco3-swath-bias-correction.git
 cd oco3-swath-bias-correction
-conda create -n oco3_bias python=3.9
+conda env create -f environment.yml
 conda activate oco3_bias
+```
+
+**Alternative (pip):** only works if GEOS, PROJ, and HDF5 are already installed
+on your system; otherwise the `cartopy` / `pyproj` / `netcdf4` builds will fail.
+```bash
+git clone https://github.com/your-username/oco3-swath-bias-correction.git
+cd oco3-swath-bias-correction
+conda create -n oco3_bias python=3.9 && conda activate oco3_bias
 pip install -r requirements.txt
 ```
+
+Or run `bash setup.sh`, which picks the conda path when conda is available and
+falls back to pip otherwise.
 
 ### Configuration
 Recommended: copy `src/utils/config_local.example.py` to `src/utils/config_local.py` and set `USER_DATA_DIR` and `USER_OUTPUT_DIR`.

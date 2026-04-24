@@ -33,7 +33,6 @@ matplotlib.use('Agg')
 
 import netCDF4 as nc # Added import
 from src.data_preparation.Make_Pkl import get_all_headers_with_dims # Added import
-import xarray as xr
 from scipy.stats import linregress
 import cartopy.feature as cfeature
 from .config_paths import PathConfig

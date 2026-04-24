@@ -51,22 +51,23 @@ fi
 echo
 echo "🏗️  Setting up Python environment..."
 if $CONDA_AVAILABLE; then
-    echo "Creating conda environment 'oco3_bias'..."
+    echo "Creating conda environment 'oco3_bias' from environment.yml..."
     if conda env list | grep -q "oco3_bias"; then
         if [[ "$FORCE_RECREATE" == "1" ]]; then
             print_status "yellow" "Environment 'oco3_bias' exists; recreating due to FORCE_RECREATE=1"
             conda env remove -n oco3_bias -y
-            conda create -n oco3_bias python=3.9 -y
+            conda env create -f environment.yml
         else
             print_status "yellow" "Environment 'oco3_bias' already exists (skipping creation). Set FORCE_RECREATE=1 to recreate."
         fi
     else
-        conda create -n oco3_bias python=3.9 -y
+        conda env create -f environment.yml
     fi
-    
+
     print_status "blue" "Activating environment..."
     eval "$(conda shell.bash hook)"
     conda activate oco3_bias
+    print_status "green" "Dependencies installed via conda-forge (environment.yml)"
 else
     # Check if in virtual environment
     if [[ -z "$VIRTUAL_ENV" ]]; then
@@ -74,12 +75,13 @@ else
         echo "  python3 -m venv oco3_bias"
         echo "  source oco3_bias/bin/activate"
     fi
-fi
 
-# Install dependencies
-echo
-echo "📦 Installing dependencies..."
-pip install -r requirements.txt
+    echo
+    echo "📦 Installing dependencies via pip..."
+    print_status "yellow" "Note: cartopy, pyproj, netcdf4, and h5py require system GEOS, PROJ, and HDF5 libraries."
+    print_status "yellow" "If pip install fails, install conda and re-run this script (recommended)."
+    pip install -r requirements.txt
+fi
 
 # Verify installation
 echo
