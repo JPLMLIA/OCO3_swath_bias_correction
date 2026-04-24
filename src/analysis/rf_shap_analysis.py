@@ -959,119 +959,124 @@ def create_comprehensive_2d_interactions(shap_values, X_sample, feature_names, i
     plt.show()
     plt.close()
 
+
+def _estimate_shap_zero_crossing(feature_vals: np.ndarray, shap_vals: np.ndarray) -> tuple[float | None, list[float]]:
+    """Return the median feature value at which the SHAP contribution crosses zero.
+
+    Crossings are found by walking the SAMs in order of increasing feature value and
+    linearly interpolating between consecutive points whose SHAP values straddle zero.
+
+    Returns:
+        (median_crossing, all_crossings). ``median_crossing`` is ``None`` if no
+        crossings were found.
+    """
+    order = np.argsort(feature_vals)
+    fx = np.asarray(feature_vals)[order]
+    sy = np.asarray(shap_vals)[order]
+
+    crossings: list[float] = []
+    for j in range(len(sy) - 1):
+        straddles_zero = (sy[j] <= 0 <= sy[j + 1]) or (sy[j] >= 0 >= sy[j + 1])
+        if not straddles_zero:
+            continue
+        denom = sy[j + 1] - sy[j]
+        if abs(denom) < 1e-12:
+            continue
+        crossings.append(float(fx[j] + (fx[j + 1] - fx[j]) * (-sy[j] / denom)))
+
+    if not crossings:
+        return None, []
+    return float(np.median(crossings)), crossings
+
+
 def analyze_decision_boundaries_from_shap(shap_values, X_sample, feature_names, output_dir, save_fig=True):
-    """Analyze actual decision boundaries from SHAP dependence to understand thresholds"""
+    """Plot SHAP-vs-feature dependence (Figure B1) without color encoding.
+
+    Per reviewer feedback (the prior color was redundant with the y-axis), this
+    renders plain black-on-white scatter plots. For each feature, the SHAP zero
+    crossing (median of all interpolated crossings) is shown as a red dotted
+    vertical line whose label in the per-panel legend reports the numeric
+    threshold; the dashed blue horizontal line marks SHAP = 0. Subpanels are
+    labeled (a)-(e) for caption references. Both PNG and PDF are written.
+
+    Returns:
+        dict mapping feature name to {estimated_boundary, zero_crossings, n_crossings}.
+    """
     print("Analyzing decision boundaries from SHAP dependence...")
-    
+
     n_features = len(feature_names)
-    fig, axes = plt.subplots(2, 3, figsize=(12, 7))  # Reduced figure size by half
+    n_rows, n_cols = 2, 3
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 7))
     axes = axes.flatten()
-    
-    boundary_analysis = {}
-    
-    # Calculate y-axis limits for consistent scaling (excluding max_relative_jump)
-    all_shap_values = []
-    for i, feature in enumerate(feature_names):
-        if i >= 6:  # Only analyze first 6 features
-            break
-        if feature != 'max_relative_jump':
-            all_shap_values.extend(shap_values[:, i])
-    
-    if all_shap_values:
-        y_min, y_max = np.percentile(all_shap_values, [2, 98])  # Use 2nd and 98th percentile for robustness
-        y_margin = (y_max - y_min) * 0.1
-        common_ylim = (y_min - y_margin, y_max + y_margin)
+
+    # Shared y-limits for all features except max_relative_jump (much wider range).
+    other_idx = [i for i, f in enumerate(feature_names[:6]) if f != 'max_relative_jump']
+    if other_idx:
+        other_vals = np.concatenate([shap_values[:, i] for i in other_idx])
+        y_lo, y_hi = np.percentile(other_vals, [2, 98])
+        y_margin = 0.1 * (y_hi - y_lo)
+        common_ylim = (y_lo - y_margin, y_hi + y_margin)
     else:
         common_ylim = None
-    
-    for i, feature in enumerate(feature_names):
-        if i >= 6:  # Only analyze first 6 features
-            break
-            
+
+    panel_letters = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)']
+    boundary_analysis: dict[str, dict] = {}
+
+    for i, feature in enumerate(feature_names[:6]):
         ax = axes[i]
-        
-        # Get feature values and SHAP values
-        feature_vals = X_sample.iloc[:, i]
+
+        feature_vals = X_sample.iloc[:, i].to_numpy()
         shap_vals = shap_values[:, i]
-        
-        # Create color mapping: blue for positive SHAP, red for negative SHAP
-        colors = np.where(shap_vals >= 0, shap_vals, -shap_vals)  # Absolute values for color intensity
-        colormap = plt.cm.RdBu_r  # Red for negative, blue for positive
-        
-        # Normalize colors
-        vmin, vmax = np.percentile(np.abs(shap_vals), [5, 95])  # Use percentiles for robust normalization
-        scatter = ax.scatter(feature_vals, shap_vals, alpha=0.6, s=10, c=shap_vals, 
-                           cmap=colormap, vmin=-vmax, vmax=vmax)
-        
-        # Add zero line (decision boundary)
-        ax.axhline(y=0, color='black', linestyle='--', alpha=0.8, linewidth=2, 
-                  label='Decision Boundary (SHAP=0)')
-        
-        # Find approximate decision boundary
-        # Sort by feature values and find where SHAP values cross zero
-        sorted_indices = np.argsort(feature_vals)
-        sorted_features = feature_vals.iloc[sorted_indices]
-        sorted_shaps = shap_vals[sorted_indices]
-        
-        # Find zero crossings
-        zero_crossings = []
-        for j in range(len(sorted_shaps) - 1):
-            if (sorted_shaps[j] <= 0 <= sorted_shaps[j+1]) or (sorted_shaps[j] >= 0 >= sorted_shaps[j+1]):
-                # Linear interpolation to find crossing point
-                if abs(sorted_shaps[j+1] - sorted_shaps[j]) > 1e-10:  # Avoid division by zero
-                    crossing_x = sorted_features.iloc[j] + (sorted_features.iloc[j+1] - sorted_features.iloc[j]) * \
-                                (-sorted_shaps[j] / (sorted_shaps[j+1] - sorted_shaps[j]))
-                    zero_crossings.append(crossing_x)
-        
-        if zero_crossings:
-            # Find the main decision boundary (median crossing point)
-            main_boundary = np.median(zero_crossings)
-            ax.axvline(x=main_boundary, color='green', linestyle=':', linewidth=2,
-                      label=f'Est. Boundary ≈ {main_boundary:.2f}')
-            
+
+        ax.scatter(feature_vals, shap_vals, color='0.15', s=8, alpha=0.4, linewidths=0)
+        ax.axhline(0, color='tab:blue', linestyle='--', linewidth=1.2, alpha=0.9,
+                   label='SHAP = 0')
+
+        main_boundary, zero_crossings = _estimate_shap_zero_crossing(feature_vals, shap_vals)
+        if main_boundary is not None:
+            ax.axvline(main_boundary, color='tab:red', linestyle=':', linewidth=1.6,
+                       label=f'Est. threshold ≈ {main_boundary:.2f}')
             boundary_analysis[feature] = {
                 'estimated_boundary': main_boundary,
                 'zero_crossings': zero_crossings,
-                'n_crossings': len(zero_crossings)
+                'n_crossings': len(zero_crossings),
             }
-            
-            print(f"{feature}: Estimated decision boundary at {main_boundary:.3f}")
-            if len(zero_crossings) > 1:
-                print(f"  Multiple crossings detected: {len(zero_crossings)} points")
+            print(f"{feature}: Estimated decision boundary at {main_boundary:.3f}"
+                  + (f" (multiple crossings: {len(zero_crossings)})" if len(zero_crossings) > 1 else ""))
         else:
             boundary_analysis[feature] = {
                 'estimated_boundary': None,
                 'zero_crossings': [],
-                'n_crossings': 0
+                'n_crossings': 0,
             }
             print(f"{feature}: No clear decision boundary found")
-        
+
         ax.set_xlabel(feature)
-        ax.set_ylabel('SHAP Value')
-        ax.set_title(feature)  # Removed 'SHAP Dependence: ' prefix
-        ax.legend(prop={'size': 8})
-        ax.grid(True, alpha=0.3)
-        
-        # Set consistent y-axis limits for all features except max_relative_jump
+        ax.set_ylabel('SHAP value')
+        ax.grid(True, alpha=0.2, linewidth=0.5)
+        ax.text(0.02, 0.97, panel_letters[i], transform=ax.transAxes,
+                ha='left', va='top', fontsize=10, fontweight='bold')
+        ax.legend(prop={'size': 8}, loc='best', framealpha=0.85)
+
         if feature != 'max_relative_jump' and common_ylim is not None:
             ax.set_ylim(common_ylim)
-    
-    # Hide unused subplots
-    for i in range(n_features, 6):
-        axes[i].set_visible(False)
-    
-    plt.tight_layout()
+
+    for j in range(n_features, len(axes)):
+        axes[j].set_visible(False)
+
+    fig.tight_layout()
     if save_fig:
-        plt.savefig(output_dir / 'shap_decision_boundaries_analysis.png', 
-                   dpi=300, bbox_inches='tight')
+        out_png = output_dir / 'shap_decision_boundaries_analysis.png'
+        out_pdf = output_dir / 'shap_decision_boundaries_analysis.pdf'
+        plt.savefig(out_png, dpi=300, bbox_inches='tight')
+        plt.savefig(out_pdf, bbox_inches='tight')
     plt.show()
     plt.close()
-    
-    # Save boundary analysis
+
     import json
     with open(output_dir / 'shap_decision_boundaries.json', 'w') as f:
         json.dump(boundary_analysis, f, indent=2)
-    
+
     return boundary_analysis
 
 def compare_threshold_methods(predictions_df, X_sam_features, boundary_analysis, feature_analysis, output_dir, save_fig=True):

@@ -1,1 +1,12 @@
 .DS_Store
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Generated analysis outputs
+results/
+
+# Local scratch scripts
+tmp/replot_figureB1_no_color.py
